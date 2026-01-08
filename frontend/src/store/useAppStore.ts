@@ -19,6 +19,7 @@ interface AppState {
   gridSize: { width: number; height: number };
   colorCount: number;
   showGrid: boolean;
+  useDithering: boolean;
 
   // Actions
   setUser: (user: User | null) => void;
@@ -37,6 +38,7 @@ interface AppState {
   setGridSize: (size: { width: number; height: number }) => void;
   setColorCount: (count: number) => void;
   setShowGrid: (show: boolean) => void;
+  setUseDithering: (use: boolean) => void;
   setCurrentProject: (project: Project | null) => void;
 }
 
@@ -55,6 +57,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   gridSize: { width: 29, height: 29 },
   colorCount: 16,
   showGrid: true,
+  useDithering: true,
 
   // Setters
   setUser: (user) => set({ user }),
@@ -68,6 +71,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setGridSize: (size) => set({ gridSize: size }),
   setColorCount: (count) => set({ colorCount: count }),
   setShowGrid: (show) => set({ showGrid: show }),
+  setUseDithering: (use) => set({ useDithering: use }),
   setCurrentProject: (project) => set({ currentProject: project }),
 
   // 登录

@@ -53,32 +53,100 @@ export function rgbToLab(rgb: RGB): LAB {
   return xyzToLab(xyz);
 }
 
-// CIEDE2000 色差计算（简化版）
+// CIEDE2000 色差计算（完整实现）
 export function deltaE2000(lab1: LAB, lab2: LAB): number {
-  // 简化版的 CIEDE2000，使用欧几里得距离作为近似
-  // 完整的 CIEDE2000 算法非常复杂，这里使用加权欧几里得距离
-  const dl = lab1.l - lab2.l;
-  const da = lab1.a - lab2.a;
-  const db = lab1.b - lab2.b;
+  // 参考: https://en.wikipedia.org/wiki/Color_difference#CIEDE2000
+  
+  const L1 = lab1.l;
+  const a1 = lab1.a;
+  const b1 = lab1.b;
+  const L2 = lab2.l;
+  const a2 = lab2.a;
+  const b2 = lab2.b;
 
-  // 加权系数
-  const kl = 1.0;
-  const kc = 1.0;
-  const kh = 1.0;
+  // 权重因子
+  const kL = 1.0;
+  const kC = 1.0;
+  const kH = 1.0;
 
-  // 计算色度
-  const c1 = Math.sqrt(lab1.a * lab1.a + lab1.b * lab1.b);
-  const c2 = Math.sqrt(lab2.a * lab2.a + lab2.b * lab2.b);
-  const dc = c1 - c2;
+  // 计算 C1, C2 (色度)
+  const C1 = Math.sqrt(a1 * a1 + b1 * b1);
+  const C2 = Math.sqrt(a2 * a2 + b2 * b2);
+
+  // 计算平均色度
+  const avgC = (C1 + C2) / 2;
+
+  // 计算 G 因子
+  const G = 0.5 * (1 - Math.sqrt(Math.pow(avgC, 7) / (Math.pow(avgC, 7) + Math.pow(25, 7))));
+
+  // 调整 a 值
+  const a1Prime = a1 * (1 + G);
+  const a2Prime = a2 * (1 + G);
+
+  // 重新计算色度
+  const C1Prime = Math.sqrt(a1Prime * a1Prime + b1 * b1);
+  const C2Prime = Math.sqrt(a2Prime * a2Prime + b2 * b2);
+
+  // 计算色调角
+  const h1Prime = (Math.atan2(b1, a1Prime) * 180 / Math.PI + 360) % 360;
+  const h2Prime = (Math.atan2(b2, a2Prime) * 180 / Math.PI + 360) % 360;
+
+  // 计算差值
+  const deltaLPrime = L2 - L1;
+  const deltaCPrime = C2Prime - C1Prime;
 
   // 计算色调差
-  const dh = Math.sqrt(da * da + db * db - dc * dc);
+  let deltahPrime;
+  if (C1Prime * C2Prime === 0) {
+    deltahPrime = 0;
+  } else if (Math.abs(h2Prime - h1Prime) <= 180) {
+    deltahPrime = h2Prime - h1Prime;
+  } else if (h2Prime - h1Prime > 180) {
+    deltahPrime = h2Prime - h1Prime - 360;
+  } else {
+    deltahPrime = h2Prime - h1Prime + 360;
+  }
 
-  // 加权距离
+  const deltaHPrime = 2 * Math.sqrt(C1Prime * C2Prime) * Math.sin((deltahPrime * Math.PI / 180) / 2);
+
+  // 计算平均值
+  const avgLPrime = (L1 + L2) / 2;
+  const avgCPrime = (C1Prime + C2Prime) / 2;
+
+  let avghPrime;
+  if (C1Prime * C2Prime === 0) {
+    avghPrime = h1Prime + h2Prime;
+  } else if (Math.abs(h1Prime - h2Prime) <= 180) {
+    avghPrime = (h1Prime + h2Prime) / 2;
+  } else if (h1Prime + h2Prime < 360) {
+    avghPrime = (h1Prime + h2Prime + 360) / 2;
+  } else {
+    avghPrime = (h1Prime + h2Prime - 360) / 2;
+  }
+
+  // 计算 T
+  const T = 1 - 0.17 * Math.cos((avghPrime - 30) * Math.PI / 180) +
+            0.24 * Math.cos(2 * avghPrime * Math.PI / 180) +
+            0.32 * Math.cos((3 * avghPrime + 6) * Math.PI / 180) -
+            0.20 * Math.cos((4 * avghPrime - 63) * Math.PI / 180);
+
+  // 计算 SL, SC, SH
+  const SL = 1 + (0.015 * Math.pow(avgLPrime - 50, 2)) / 
+             Math.sqrt(20 + Math.pow(avgLPrime - 50, 2));
+  const SC = 1 + 0.045 * avgCPrime;
+  const SH = 1 + 0.015 * avgCPrime * T;
+
+  // 计算旋转项 RT
+  const deltaTheta = 30 * Math.exp(-Math.pow((avghPrime - 275) / 25, 2));
+  const RC = 2 * Math.sqrt(Math.pow(avgCPrime, 7) / (Math.pow(avgCPrime, 7) + Math.pow(25, 7)));
+  const RT = -RC * Math.sin(2 * deltaTheta * Math.PI / 180);
+
+  // 最终 CIEDE2000 色差
   const deltaE = Math.sqrt(
-    Math.pow(dl / kl, 2) +
-    Math.pow(dc / kc, 2) +
-    Math.pow(dh / kh, 2)
+    Math.pow(deltaLPrime / (kL * SL), 2) +
+    Math.pow(deltaCPrime / (kC * SC), 2) +
+    Math.pow(deltaHPrime / (kH * SH), 2) +
+    RT * (deltaCPrime / (kC * SC)) * (deltaHPrime / (kH * SH))
   );
 
   return deltaE;
