@@ -1,0 +1,121 @@
+// Prisma Schema for 拼豆图纸转换工具
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表
+model User {
+  id            BigInt    @id @default(autoincrement())
+  username      String    @unique @db.VarChar(50)
+  email         String    @unique @db.VarChar(100)
+  passwordHash  String    @map("password_hash") @db.VarChar(255)
+  avatarUrl     String?   @map("avatar_url") @db.VarChar(500)
+  role          String    @default("user") @db.VarChar(20) // user, admin
+  status        String    @default("active") @db.VarChar(20) // active, banned, deleted
+  tokenVersion  Int       @default(0) @map("token_version") // 用于撤销refresh token
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // 关联
+  activations      UserActivation[]
+  projects         UserProject[]
+  redemptionLogs   RedemptionLog[]
+  createdCodes     RedemptionCode[]  @relation("CreatedBy")
+
+  @@index([email])
+  @@map("users")
+}
+
+// 兑换码表
+model RedemptionCode {
+  id                BigInt    @id @default(autoincrement())
+  code              String    @unique @db.VarChar(32)
+  codeType          String    @map("code_type") @db.VarChar(20) // trial_30, standard_90, premium_365
+  durationDays      Int       @map("duration_days")
+  batchId           String?   @map("batch_id") @db.VarChar(50)
+  status            String    @default("unused") @db.VarChar(20) // unused, used, expired, revoked
+  maxUsageCount     Int       @default(1) @map("max_usage_count")
+  currentUsageCount Int       @default(0) @map("current_usage_count")
+  validFrom         DateTime  @default(now()) @map("valid_from")
+  validUntil        DateTime? @map("valid_until")
+  createdById       BigInt?   @map("created_by") 
+  createdAt         DateTime  @default(now()) @map("created_at")
+  notes             String?   @db.Text
+
+  // 关联
+  createdBy       User?              @relation("CreatedBy", fields: [createdById], references: [id])
+  activations     UserActivation[]
+  redemptionLogs  RedemptionLog[]
+
+  @@index([code])
+  @@index([status])
+  @@index([batchId])
+  @@map("redemption_codes")
+}
+
+// 用户激活记录表（用户权益）
+model UserActivation {
+  id                BigInt    @id @default(autoincrement())
+  userId            BigInt    @map("user_id")
+  redemptionCodeId  BigInt    @map("redemption_code_id")
+  codeType          String    @map("code_type") @db.VarChar(20)
+  activatedAt       DateTime  @default(now()) @map("activated_at")
+  expiresAt         DateTime  @map("expires_at")
+  isActive          Boolean   @default(true) @map("is_active")
+
+  // 关联
+  user           User            @relation(fields: [userId], references: [id])
+  redemptionCode RedemptionCode  @relation(fields: [redemptionCodeId], references: [id])
+
+  @@unique([userId, redemptionCodeId])
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("user_activations")
+}
+
+// 用户作品表
+model UserProject {
+  id               BigInt    @id @default(autoincrement())
+  userId           BigInt?   @map("user_id")
+  projectName      String    @map("project_name") @db.VarChar(200)
+  originalImageUrl String?   @map("original_image_url") @db.VarChar(500)
+  config           Json?     // 存储配置参数
+  gridData         Json?     @map("grid_data") // 存储网格数据
+  colorPalette     Json?     @map("color_palette") // 使用的颜色
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  // 关联
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("user_projects")
+}
+
+// 兑换日志表（审计）
+model RedemptionLog {
+  id                BigInt    @id @default(autoincrement())
+  userId            BigInt?   @map("user_id")
+  redemptionCodeId  BigInt?   @map("redemption_code_id")
+  action            String    @db.VarChar(50) // redeem, revoke, expire
+  ipAddress         String?   @map("ip_address") @db.VarChar(50)
+  userAgent         String?   @map("user_agent") @db.Text
+  result            String    @db.VarChar(20) // success, failure
+  errorMessage      String?   @map("error_message") @db.Text
+  createdAt         DateTime  @default(now()) @map("created_at")
+
+  // 关联
+  user           User?           @relation(fields: [userId], references: [id])
+  redemptionCode RedemptionCode? @relation(fields: [redemptionCodeId], references: [id])
+
+  @@index([userId])
+  @@index([redemptionCodeId])
+  @@index([createdAt])
+  @@map("redemption_logs")
+}
