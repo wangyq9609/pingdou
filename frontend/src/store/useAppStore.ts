@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { User, Activation, BeadColor, GridCell, Project } from '../types';
+import { User, Activation } from '../types';
 import { authService } from '../services/authService';
 
 interface AppState {
@@ -8,18 +8,6 @@ interface AppState {
   isAuthenticated: boolean;
   activation: Activation | null;
   isLoading: boolean;
-
-  // 工作区相关
-  currentProject: Project | null;
-  originalImage: HTMLImageElement | null;
-  gridData: GridCell[][] | null;
-  selectedPalette: BeadColor[];
-
-  // 配置
-  gridSize: { width: number; height: number };
-  colorCount: number;
-  showGrid: boolean;
-  useDithering: boolean;
 
   // Actions
   setUser: (user: User | null) => void;
@@ -31,48 +19,20 @@ interface AppState {
   register: (username: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   initializeAuth: () => Promise<void>;
-  
-  setOriginalImage: (image: HTMLImageElement | null) => void;
-  setGridData: (data: GridCell[][] | null) => void;
-  setSelectedPalette: (palette: BeadColor[]) => void;
-  setGridSize: (size: { width: number; height: number }) => void;
-  setColorCount: (count: number) => void;
-  setShowGrid: (show: boolean) => void;
-  setUseDithering: (use: boolean) => void;
-  setCurrentProject: (project: Project | null) => void;
 }
 
-export const useAppStore = create<AppState>((set, get) => ({
+export const useAppStore = create<AppState>((set) => ({
   // 初始状态
   user: null,
   isAuthenticated: false,
   activation: null,
   isLoading: true,
-  
-  currentProject: null,
-  originalImage: null,
-  gridData: null,
-  selectedPalette: [],
-  
-  gridSize: { width: 29, height: 29 },
-  colorCount: 16,
-  showGrid: true,
-  useDithering: true,
 
   // Setters
   setUser: (user) => set({ user }),
   setActivation: (activation) => set({ activation }),
   setIsAuthenticated: (isAuth) => set({ isAuthenticated: isAuth }),
   setIsLoading: (loading) => set({ isLoading: loading }),
-  
-  setOriginalImage: (image) => set({ originalImage: image }),
-  setGridData: (data) => set({ gridData: data }),
-  setSelectedPalette: (palette) => set({ selectedPalette: palette }),
-  setGridSize: (size) => set({ gridSize: size }),
-  setColorCount: (count) => set({ colorCount: count }),
-  setShowGrid: (show) => set({ showGrid: show }),
-  setUseDithering: (use) => set({ useDithering: use }),
-  setCurrentProject: (project) => set({ currentProject: project }),
 
   // 登录
   login: async (email, password) => {
@@ -124,9 +84,6 @@ export const useAppStore = create<AppState>((set, get) => ({
         user: null,
         activation: null,
         isAuthenticated: false,
-        currentProject: null,
-        originalImage: null,
-        gridData: null,
       });
     }
   },
