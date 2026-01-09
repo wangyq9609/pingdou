@@ -1,5 +1,6 @@
 import { rgbToLab, deltaE2000, RGB } from './colorConverter';
 import { PerlerColor, PERLER_COLORS } from './perlerColors';
+import { bicubicResize } from './bicubicInterpolation';
 
 // 像素数据接口
 export interface PixelData {
@@ -24,11 +25,12 @@ export interface ProcessOptions {
   dithering: boolean; // 是否启用抖动
   brightness: number; // 亮度调整 (-100 到 100)
   contrast: number; // 对比度调整 (-100 到 100)
+  useBicubic?: boolean; // 是否使用双三次插值（默认 true）
 }
 
 // 默认处理参数
 export const DEFAULT_OPTIONS: ProcessOptions = {
-  pixelSize: 50,
+  pixelSize: 100,
   colorPalette: PERLER_COLORS.filter(c => c.available),
   dithering: false,
   brightness: 0,
@@ -153,16 +155,29 @@ function findClosestPerlerColor(rgb: RGB, palette: PerlerColor[]): PerlerColor {
 
 /**
  * 降采样：将图片缩小到指定像素尺寸
+ * 使用双三次插值进行高质量缩放
  */
 function downsample(
   imageData: ImageData,
-  targetWidth: number
+  targetWidth: number,
+  useBicubic: boolean = true
 ): ImageData {
   const sourceWidth = imageData.width;
   const sourceHeight = imageData.height;
   const scale = sourceWidth / targetWidth;
   const targetHeight = Math.round(sourceHeight / scale);
-  
+
+  // 如果目标尺寸大于等于源尺寸，直接返回
+  if (targetWidth >= sourceWidth && targetHeight >= sourceHeight) {
+    return imageData;
+  }
+
+  // 使用双三次插值
+  if (useBicubic) {
+    return bicubicResize(imageData, targetWidth, targetHeight);
+  }
+
+  // 回退到 Canvas 方法（双线性插值）
   const canvas = document.createElement('canvas');
   canvas.width = targetWidth;
   canvas.height = targetHeight;
@@ -172,7 +187,7 @@ function downsample(
     throw new Error('无法创建画布上下文');
   }
   
-  // 使用高质量缩放
+  // 使用高质量缩放（Canvas 默认使用双线性或 Lanczos）
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
   
@@ -263,8 +278,8 @@ export async function processImageToPerler(
     );
   }
   
-  // 3. 降采样到目标尺寸
-  imageData = downsample(imageData, options.pixelSize);
+  // 3. 降采样到目标尺寸（使用双三次插值）
+  imageData = downsample(imageData, options.pixelSize, options.useBicubic !== false);
   
   const width = imageData.width;
   const height = imageData.height;
