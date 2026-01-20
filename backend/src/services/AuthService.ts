@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import prisma from '../db';
 import { config } from '../config';
 import { generateAccessToken, generateRefreshToken } from '../utils/jwt';
+import { CODE_TYPES } from '../types';
 import logger from '../utils/logger';
 
 export class AuthService {
@@ -144,10 +145,17 @@ export class AuthService {
         accessToken,
         refreshToken,
       },
-      activation: activation ? {
-        codeType: activation.codeType,
-        expiresAt: activation.expiresAt.toISOString(),
-      } : null,
+      activation: activation ? (() => {
+        const codeTypeConfig = CODE_TYPES[activation.codeType];
+        const daysLeft = Math.ceil((activation.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        return {
+          codeType: activation.codeType,
+          codeTypeName: codeTypeConfig?.name || activation.codeType,
+          expiresAt: activation.expiresAt.toISOString(),
+          daysLeft,
+          features: codeTypeConfig?.features || []
+        };
+      })() : null,
     };
   }
 
@@ -183,11 +191,17 @@ export class AuthService {
         role: user.role,
         avatarUrl: user.avatarUrl,
       },
-      activation: activation ? {
-        codeType: activation.codeType,
-        expiresAt: activation.expiresAt.toISOString(),
-        daysLeft: Math.ceil((activation.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
-      } : null,
+      activation: activation ? (() => {
+        const codeTypeConfig = CODE_TYPES[activation.codeType];
+        const daysLeft = Math.ceil((activation.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+        return {
+          codeType: activation.codeType,
+          codeTypeName: codeTypeConfig?.name || activation.codeType,
+          expiresAt: activation.expiresAt.toISOString(),
+          daysLeft,
+          features: codeTypeConfig?.features || []
+        };
+      })() : null,
     };
   }
 }
