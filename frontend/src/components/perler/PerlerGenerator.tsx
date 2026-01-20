@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react';
 import { UploadOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
-import { Button, Slider, Switch, Upload as AntUpload, message, Card, Space, Divider } from 'antd';
+import { Button, Slider, Switch, Upload as AntUpload, message, Card, Space, Divider, Select } from 'antd';
 import PixelGrid from './PixelGrid';
 import PixelGridModal from './PixelGridModal';
 import MaterialList from './MaterialList';
@@ -13,12 +13,16 @@ import {
 } from '../../utils/imageProcessor';
 import { PERLER_COLORS, getAvailableColors } from '../../utils/perlerColors';
 
+// 品牌类型定义
+export type BrandType = 'MARD' | 'COCO' | '漫漫' | '盼盼' | '咪小窝' | 'none';
+
 const PerlerGenerator: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
   const [processing, setProcessing] = useState(false);
   const [result, setResult] = useState<ProcessResult | null>(null);
   const [options, setOptions] = useState<ProcessOptions>(DEFAULT_OPTIONS);
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState<BrandType>('MARD');
 
   // 处理图片
   const handleProcess = useCallback(async () => {
@@ -29,7 +33,23 @@ const PerlerGenerator: React.FC = () => {
 
     setProcessing(true);
     try {
-      const processed = await processImageToPerler(file, options);
+      // 如果选择了品牌，只使用有该品牌色号的颜色
+      let colorPalette = options.colorPalette;
+      if (selectedBrand !== 'none') {
+        colorPalette = options.colorPalette.filter(
+          color => color.brandCodes?.[selectedBrand]
+        );
+        if (colorPalette.length === 0) {
+          message.error(`所选品牌 ${selectedBrand} 没有可用颜色`);
+          setProcessing(false);
+          return;
+        }
+      }
+
+      const processed = await processImageToPerler(file, {
+        ...options,
+        colorPalette,
+      });
       setResult(processed);
       message.success('处理完成！');
     } catch (error) {
@@ -38,7 +58,7 @@ const PerlerGenerator: React.FC = () => {
     } finally {
       setProcessing(false);
     }
-  }, [file, options]);
+  }, [file, options, selectedBrand]);
 
   // 文件上传处理
   const handleFileChange = (info: any) => {
@@ -113,15 +133,22 @@ const PerlerGenerator: React.FC = () => {
 
     let content = '拼豆材料清单\n';
     content += '='.repeat(30) + '\n';
-    content += `图案尺寸: ${result.width} x ${result.height} (共 ${total} 颗)\n\n`;
-    content += '颜色清单:\n';
+    content += `图案尺寸: ${result.width} x ${result.height} (共 ${total} 颗)\n`;
+    if (selectedBrand !== 'none') {
+      content += `品牌色号: ${selectedBrand}\n`;
+    }
+    content += '\n颜色清单:\n';
     content += '-'.repeat(30) + '\n';
 
     materials.forEach((item, index) => {
       const percentage = ((item.count / total) * 100).toFixed(1);
       content += `${index + 1}. ${item.color.name} (${item.color.nameEn})\n`;
       content += `   数量: ${item.count} 颗 (${percentage}%)\n`;
-      content += `   颜色代码: ${item.color.hex}\n\n`;
+      content += `   颜色代码: ${item.color.hex}\n`;
+      if (selectedBrand !== 'none' && item.color.brandCodes?.[selectedBrand]) {
+        content += `   ${selectedBrand}色号: ${item.color.brandCodes[selectedBrand]}\n`;
+      }
+      content += '\n';
     });
 
     const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -215,6 +242,29 @@ const PerlerGenerator: React.FC = () => {
                 />
                 <div className="text-xs text-gray-500 mt-1">
                   控制图案的精细程度，数值越大越精细
+                </div>
+              </div>
+
+              <Divider className="my-2" />
+
+              <div>
+                <div className="mb-2">
+                  <span className="text-sm font-medium">品牌色号</span>
+                </div>
+                <Select
+                  value={selectedBrand}
+                  onChange={(value) => setSelectedBrand(value)}
+                  className="w-full"
+                  options={[
+                    { label: 'MARD', value: 'MARD' },
+                    { label: 'COCO', value: 'COCO' },
+                    { label: '漫漫', value: '漫漫' },
+                    { label: '盼盼', value: '盼盼' },
+                    { label: '咪小窝', value: '咪小窝' },
+                  ]}
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  选择要在材料清单中显示的品牌色号
                 </div>
               </div>
 
@@ -343,7 +393,7 @@ const PerlerGenerator: React.FC = () => {
             }
             className="shadow-sm"
           >
-            <MaterialList materials={materials} totalPixels={totalPixels} />
+            <MaterialList materials={materials} totalPixels={totalPixels} selectedBrand={selectedBrand} />
           </Card>
         </div>
       </div>

@@ -1,13 +1,15 @@
 import React from 'react';
 import { MaterialItem } from '../../utils/imageProcessor';
-import { PerlerColor } from '../../utils/perlerColors';
+import type { BrandType } from './PerlerGenerator';
 
 interface MaterialListProps {
   materials: MaterialItem[];
   totalPixels: number;
+  selectedBrand: BrandType;
 }
 
-const MaterialList: React.FC<MaterialListProps> = ({ materials, totalPixels }) => {
+const MaterialList: React.FC<MaterialListProps> = ({ materials, totalPixels, selectedBrand }) => {
+
   if (materials.length === 0) {
     return (
       <div className="text-center text-gray-500 py-4">
@@ -24,6 +26,10 @@ const MaterialList: React.FC<MaterialListProps> = ({ materials, totalPixels }) =
       <div className="max-h-96 overflow-y-auto space-y-2">
         {materials.map((item) => {
           const percentage = ((item.count / totalPixels) * 100).toFixed(1);
+          const displayCode = selectedBrand !== 'none' && item.color.brandCodes?.[selectedBrand]
+            ? item.color.brandCodes[selectedBrand]
+            : null;
+
           return (
             <div
               key={item.color.id}
@@ -36,12 +42,20 @@ const MaterialList: React.FC<MaterialListProps> = ({ materials, totalPixels }) =
                   title={item.color.name}
                 />
                 <div className="flex-1">
-                  <div className="text-sm font-medium text-gray-800">
-                    {item.color.name}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    {item.color.nameEn}
-                  </div>
+                  {displayCode ? (
+                    <div className="text-sm font-medium text-gray-800">
+                      {displayCode}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="text-sm font-medium text-gray-800">
+                        {item.color.name}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {item.color.nameEn}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
               <div className="text-right">
