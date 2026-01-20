@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { UploadOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import { Button, Slider, Switch, Upload as AntUpload, message, Card, Space, Divider, Select } from 'antd';
+import type { PixelData } from '../../utils/imageProcessor';
 import PixelGrid from './PixelGrid';
 import PixelGridModal from './PixelGridModal';
 import MaterialList from './MaterialList';
@@ -11,7 +12,6 @@ import {
   ProcessResult,
   generateMaterialList,
 } from '../../utils/imageProcessor';
-import { PERLER_COLORS, getAvailableColors } from '../../utils/perlerColors';
 
 // 品牌类型定义
 export type BrandType = 'MARD' | 'COCO' | '漫漫' | '盼盼' | '咪小窝' | 'none';
@@ -23,6 +23,8 @@ const PerlerGenerator: React.FC = () => {
   const [options, setOptions] = useState<ProcessOptions>(DEFAULT_OPTIONS);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedBrand, setSelectedBrand] = useState<BrandType>('MARD');
+  const [hoveredPixel, setHoveredPixel] = useState<PixelData | null>(null);
+  const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
 
   // 处理图片
   const handleProcess = useCallback(async () => {
@@ -160,6 +162,14 @@ const PerlerGenerator: React.FC = () => {
     URL.revokeObjectURL(url);
     message.success('材料清单已导出');
   };
+
+  // 处理像素悬浮
+  const handlePixelHover = useCallback((pixel: PixelData | null, x?: number, y?: number) => {
+    setHoveredPixel(pixel);
+    if (pixel && x !== undefined && y !== undefined) {
+      setPopoverPosition({ x, y });
+    }
+  }, []);
 
   const materials = result
     ? generateMaterialList(result, options.colorPalette)
@@ -348,13 +358,30 @@ const PerlerGenerator: React.FC = () => {
             <div className="flex-1 flex flex-col min-h-0">
               {result ? (
                 <>
-                  <div className="flex-1 min-h-0 overflow-hidden">
+                  <div className="flex-1 min-h-0 overflow-hidden relative">
                     <PixelGrid
                       pixels={result.pixels}
                       showGrid={true}
                       autoFit={true}
                       onImageClick={() => setModalVisible(true)}
+                      selectedBrand={selectedBrand}
+                      onPixelHover={handlePixelHover}
                     />
+                    {hoveredPixel && (
+                      <div
+                        className="fixed z-50 bg-gray-900 text-white text-xs px-2 py-1 rounded shadow-lg pointer-events-none whitespace-nowrap"
+                        style={{
+                          left: `${popoverPosition.x + 5}px`,
+                          top: `${popoverPosition.y - 5}px`,
+                        }}
+                      >
+                        {selectedBrand !== 'none' && hoveredPixel.color.brandCodes?.[selectedBrand] ? (
+                          <div className="font-semibold">{hoveredPixel.color.brandCodes[selectedBrand]}</div>
+                        ) : (
+                          <div>{hoveredPixel.color.hex}</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="mt-4 text-sm text-gray-600 text-center space-y-1 flex-shrink-0">
                     <div>尺寸: {result.width} × {result.height} 像素</div>
@@ -403,9 +430,31 @@ const PerlerGenerator: React.FC = () => {
         <PixelGridModal
           visible={modalVisible}
           pixels={result.pixels}
-          onClose={() => setModalVisible(false)}
+          onClose={() => {
+            setModalVisible(false);
+            setHoveredPixel(null);
+          }}
           showGrid={true}
+          selectedBrand={selectedBrand}
+          onPixelHover={handlePixelHover}
         />
+      )}
+
+      {/* 悬浮提示框 - 用于Modal */}
+      {hoveredPixel && modalVisible && (
+        <div
+          className="fixed z-[9999] bg-gray-900 text-white text-xs px-2 py-1 rounded shadow-lg pointer-events-none whitespace-nowrap"
+          style={{
+            left: `${popoverPosition.x + 5}px`,
+            top: `${popoverPosition.y - 5}px`,
+          }}
+        >
+          {selectedBrand !== 'none' && hoveredPixel.color.brandCodes?.[selectedBrand] ? (
+            <div className="font-semibold">{hoveredPixel.color.brandCodes[selectedBrand]}</div>
+          ) : (
+            <div>{hoveredPixel.color.hex}</div>
+          )}
+        </div>
       )}
     </div>
   );

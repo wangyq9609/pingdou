@@ -3,12 +3,15 @@ import { Modal, Button } from 'antd';
 import { CloseOutlined, ZoomInOutlined, ZoomOutOutlined } from '@ant-design/icons';
 import { Stage, Layer, Rect } from 'react-konva';
 import type { PixelData } from '../../utils/imageProcessor';
+import type { BrandType } from './PerlerGenerator';
 
 interface PixelGridModalProps {
   visible: boolean;
   pixels: PixelData[][];
   onClose: () => void;
   showGrid?: boolean;
+  selectedBrand?: BrandType;
+  onPixelHover?: (pixel: PixelData | null, x?: number, y?: number) => void;
 }
 
 const PixelGridModal: React.FC<PixelGridModalProps> = ({
@@ -16,10 +19,12 @@ const PixelGridModal: React.FC<PixelGridModalProps> = ({
   pixels,
   onClose,
   showGrid = true,
+  onPixelHover,
 }) => {
   const [cellSize, setCellSize] = useState(20);
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const hoveredPixelRef = useRef<PixelData | null>(null);
 
   // 计算初始 cellSize，使图片适应窗口
   useEffect(() => {
@@ -172,6 +177,27 @@ const PixelGridModal: React.FC<PixelGridModalProps> = ({
                       fill={pixel.color.hex}
                       stroke={showGrid && cellSize > 3 ? '#e5e7eb' : undefined}
                       strokeWidth={showGrid && cellSize > 3 ? Math.max(0.5, cellSize / 40) : 0}
+                      onMouseEnter={(e) => {
+                        hoveredPixelRef.current = pixel;
+                        const stage = e.target.getStage();
+                        if (stage) {
+                          const pointerPos = stage.getPointerPosition();
+                          if (pointerPos && e.evt) {
+                            // 直接使用鼠标事件的客户端坐标，更准确
+                            onPixelHover?.(pixel, e.evt.clientX, e.evt.clientY);
+                          }
+                        }
+                      }}
+                      onMouseLeave={() => {
+                        hoveredPixelRef.current = null;
+                        onPixelHover?.(null);
+                      }}
+                      onMouseMove={(e) => {
+                        if (hoveredPixelRef.current && e.evt) {
+                          // 直接使用鼠标事件的客户端坐标，更准确
+                          onPixelHover?.(hoveredPixelRef.current, e.evt.clientX, e.evt.clientY);
+                        }
+                      }}
                     />
                   ))
                 )}

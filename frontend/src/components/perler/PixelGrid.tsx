@@ -1,13 +1,16 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Stage, Layer, Rect } from 'react-konva';
 import type { PixelData } from '../../utils/imageProcessor';
+import type { BrandType } from './PerlerGenerator';
 
 interface PixelGridProps {
   pixels: PixelData[][];
   showGrid?: boolean;
   autoFit?: boolean; // 是否自动适应容器
-  onPixelClick?: (x: number, y: number, color: string) => void;
+  onPixelClick?: (pixel: PixelData) => void;
   onImageClick?: () => void; // 点击图片打开放大窗口
+  selectedBrand?: BrandType; // 选择的品牌
+  onPixelHover?: (pixel: PixelData | null, x?: number, y?: number) => void; // 像素悬浮回调，包含鼠标位置
 }
 
 const PixelGrid: React.FC<PixelGridProps> = ({
@@ -16,10 +19,13 @@ const PixelGrid: React.FC<PixelGridProps> = ({
   autoFit = true,
   onPixelClick,
   onImageClick,
+  selectedBrand,
+  onPixelHover,
 }) => {
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });
   const [actualCellSize, setActualCellSize] = useState(1);
   const containerRef = useRef<HTMLDivElement>(null);
+  const hoveredPixelRef = useRef<PixelData | null>(null);
 
   // 计算自适应缩放
   const calculateAutoFit = useCallback(() => {
@@ -120,13 +126,30 @@ const PixelGrid: React.FC<PixelGridProps> = ({
                       if (e.evt) {
                         e.evt.stopPropagation();
                       }
-                      onPixelClick?.(x, y, pixel.color.hex);
+                      onPixelClick?.(pixel);
                     }}
                     onTap={(e) => {
                       if (e.evt) {
                         e.evt.stopPropagation();
                       }
-                      onPixelClick?.(x, y, pixel.color.hex);
+                      onPixelClick?.(pixel);
+                    }}
+                    onMouseEnter={(e) => {
+                      hoveredPixelRef.current = pixel;
+                      if (e.evt) {
+                        // 直接使用鼠标事件的客户端坐标，更准确
+                        onPixelHover?.(pixel, e.evt.clientX, e.evt.clientY);
+                      }
+                    }}
+                    onMouseLeave={() => {
+                      hoveredPixelRef.current = null;
+                      onPixelHover?.(null);
+                    }}
+                    onMouseMove={(e) => {
+                      if (hoveredPixelRef.current && e.evt) {
+                        // 直接使用鼠标事件的客户端坐标，更准确
+                        onPixelHover?.(hoveredPixelRef.current, e.evt.clientX, e.evt.clientY);
+                      }
                     }}
                   />
                 ))
