@@ -47,13 +47,6 @@ const ProfilePage: React.FC = () => {
               <Descriptions.Item label="剩余天数">
                 {activation.daysLeft} 天
               </Descriptions.Item>
-              <Descriptions.Item label="功能权限">
-                <div className="space-y-1">
-                  {activation.features?.map((feature) => (
-                    <div key={feature}>• {feature}</div>
-                  ))}
-                </div>
-              </Descriptions.Item>
             </Descriptions>
           </Card>
         )}

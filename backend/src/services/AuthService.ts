@@ -152,8 +152,7 @@ export class AuthService {
           codeType: activation.codeType,
           codeTypeName: codeTypeConfig?.name || activation.codeType,
           expiresAt: activation.expiresAt.toISOString(),
-          daysLeft,
-          features: codeTypeConfig?.features || []
+          daysLeft
         };
       })() : null,
     };
@@ -198,8 +197,7 @@ export class AuthService {
           codeType: activation.codeType,
           codeTypeName: codeTypeConfig?.name || activation.codeType,
           expiresAt: activation.expiresAt.toISOString(),
-          daysLeft,
-          features: codeTypeConfig?.features || []
+          daysLeft
         };
       })() : null,
     };

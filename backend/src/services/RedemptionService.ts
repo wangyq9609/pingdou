@@ -95,8 +95,7 @@ export class RedemptionService {
           codeTypeName: codeTypeConfig?.name || result.codeType,
           activatedAt: result.activatedAt.toISOString(),
           expiresAt: result.expiresAt.toISOString(),
-          daysRemaining: redemptionCode.durationDays,
-          features: codeTypeConfig?.features || []
+          daysRemaining: redemptionCode.durationDays
         }
       };
     } catch (error) {
@@ -131,8 +130,7 @@ export class RedemptionService {
         activatedAt: activation.activatedAt.toISOString(),
         expiresAt: activation.expiresAt.toISOString(),
         isActive: activation.isActive && !isExpired,
-        isExpired,
-        features: codeTypeConfig?.features || []
+        isExpired
       };
     });
   }
@@ -165,8 +163,7 @@ export class RedemptionService {
       codeType: activation.codeType,
       codeTypeName: codeTypeConfig?.name || activation.codeType,
       expiresAt: activation.expiresAt.toISOString(),
-      daysLeft,
-      features: codeTypeConfig?.features || []
+      daysLeft
     };
   }
 

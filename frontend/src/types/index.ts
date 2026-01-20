@@ -13,7 +13,6 @@ export interface Activation {
   codeTypeName: string;
   expiresAt: string;
   daysLeft?: number;
-  features?: string[];
 }
 
 // 认证响应
