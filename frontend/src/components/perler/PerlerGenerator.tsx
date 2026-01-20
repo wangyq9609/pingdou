@@ -25,6 +25,7 @@ const PerlerGenerator: React.FC = () => {
   const [selectedBrand, setSelectedBrand] = useState<BrandType>('MARD');
   const [hoveredPixel, setHoveredPixel] = useState<PixelData | null>(null);
   const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
+  const [showColorCodes, setShowColorCodes] = useState(false); // 是否生成色号图
 
   // 处理图片
   const handleProcess = useCallback(async () => {
@@ -90,25 +91,74 @@ const PerlerGenerator: React.FC = () => {
     message.success(`已选择图片: ${file.name}`);
   };
 
+  // 计算颜色的亮度，用于确定文字颜色
+  const getLuminance = (hex: string): number => {
+    const r = parseInt(hex.slice(1, 3), 16);
+    const g = parseInt(hex.slice(3, 5), 16);
+    const b = parseInt(hex.slice(5, 7), 16);
+    // 使用相对亮度公式
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  };
+
   // 导出为图片
   const handleExportImage = () => {
     if (!result) return;
 
     const canvas = document.createElement('canvas');
-    const cellSize = 20;
+    // 如果显示色号，需要更大的单元格来容纳文字
+    const cellSize = showColorCodes ? 30 : 20;
     canvas.width = result.width * cellSize;
     canvas.height = result.height * cellSize;
     const ctx = canvas.getContext('2d');
 
     if (!ctx) return;
 
+    // 设置文字样式
+    if (showColorCodes) {
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // 根据单元格大小自适应字体大小
+      const fontSize = Math.max(8, Math.min(12, cellSize * 0.35));
+      ctx.font = `bold ${fontSize}px Arial, sans-serif`;
+    }
+
     // 绘制像素
     result.pixels.forEach((row, y) => {
       row.forEach((pixel, x) => {
+        const xPos = x * cellSize;
+        const yPos = y * cellSize;
+
+        // 绘制像素颜色
         ctx.fillStyle = pixel.color.hex;
-        ctx.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        ctx.fillRect(xPos, yPos, cellSize, cellSize);
+        
+        // 绘制边框
         ctx.strokeStyle = '#e5e7eb';
-        ctx.strokeRect(x * cellSize, y * cellSize, cellSize, cellSize);
+        ctx.strokeRect(xPos, yPos, cellSize, cellSize);
+
+        // 如果启用色号显示，绘制色号文字
+        if (showColorCodes) {
+          // 获取色号
+          let colorCode = '';
+          if (selectedBrand !== 'none' && pixel.color.brandCodes?.[selectedBrand]) {
+            colorCode = pixel.color.brandCodes[selectedBrand];
+          } else {
+            // 如果没有品牌色号，使用颜色ID或hex
+            colorCode = pixel.color.id || pixel.color.hex.slice(1).toUpperCase();
+          }
+
+          // 根据背景亮度选择文字颜色
+          const luminance = getLuminance(pixel.color.hex);
+          const textColor = luminance > 0.5 ? '#000000' : '#FFFFFF';
+          const strokeColor = luminance > 0.5 ? '#FFFFFF' : '#000000';
+          
+          // 绘制文字（添加描边以提高可读性）
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = Math.max(1, cellSize / 20);
+          ctx.strokeText(colorCode, xPos + cellSize / 2, yPos + cellSize / 2);
+          ctx.fillStyle = textColor;
+          ctx.fillText(colorCode, xPos + cellSize / 2, yPos + cellSize / 2);
+        }
       });
     });
 
@@ -118,7 +168,10 @@ const PerlerGenerator: React.FC = () => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `perler-pattern-${Date.now()}.png`;
+        const filename = showColorCodes 
+          ? `perler-pattern-with-codes-${Date.now()}.png`
+          : `perler-pattern-${Date.now()}.png`;
+        a.download = filename;
         a.click();
         URL.revokeObjectURL(url);
         message.success('图片已导出');
@@ -323,6 +376,20 @@ const PerlerGenerator: React.FC = () => {
               </div>
               <div className="text-xs text-gray-500">
                 启用后可以改善渐变效果，但处理时间更长
+              </div>
+
+              <Divider className="my-2" />
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">生成色号图</span>
+                <Switch
+                  checked={showColorCodes}
+                  onChange={(checked) => setShowColorCodes(checked)}
+                  disabled={!result}
+                />
+              </div>
+              <div className="text-xs text-gray-500">
+                导出时在每个像素上显示色号，方便制作拼豆图纸
               </div>
 
             </Space>
