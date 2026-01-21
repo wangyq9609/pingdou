@@ -7,7 +7,7 @@ import { useAppStore } from '../store/useAppStore';
 import { redemptionService } from '../services/redemptionService';
 import type { Activation } from '../types';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 const ActivationPage: React.FC = () => {
   const navigate = useNavigate();

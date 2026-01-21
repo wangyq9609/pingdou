@@ -1,6 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, Dropdown, Avatar, Space, Tag } from 'antd';
-import { UserOutlined, LogoutOutlined, SettingOutlined, GiftOutlined } from '@ant-design/icons';
+import { UserOutlined, LogoutOutlined, GiftOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { useAppStore } from '../../store/useAppStore';
 

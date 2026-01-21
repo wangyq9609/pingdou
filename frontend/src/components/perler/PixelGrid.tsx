@@ -19,7 +19,7 @@ const PixelGrid: React.FC<PixelGridProps> = ({
   autoFit = true,
   onPixelClick,
   onImageClick,
-  selectedBrand,
+  selectedBrand: _selectedBrand,
   onPixelHover,
 }) => {
   const [stageSize, setStageSize] = useState({ width: 0, height: 0 });

@@ -31,7 +31,7 @@ export function getColorById(id: string): PerlerColor | undefined {
 }
 
 // 根据 HEX 查找最接近的颜色
-export function findClosestColor(hex: string, colors: PerlerColor[] = MERGED_COLORS): PerlerColor {
+export function findClosestColor(_hex: string, colors: PerlerColor[] = MERGED_COLORS): PerlerColor {
   // 这个函数会在图片处理模块中实现，使用颜色匹配算法
   return colors[0]; // 占位符
 }
