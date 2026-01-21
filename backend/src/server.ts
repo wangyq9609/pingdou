@@ -12,7 +12,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // 请求日志
-app.use((req: Request, res: Response, next: NextFunction) => {
+app.use((req: Request, _res: Response, next: NextFunction) => {
   logger.info(`${req.method} ${req.path}`, {
     ip: req.ip,
     userAgent: req.get('user-agent'),
@@ -21,7 +21,7 @@ app.use((req: Request, res: Response, next: NextFunction) => {
 });
 
 // 健康检查
-app.get('/health', (req: Request, res: Response) => {
+app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
@@ -35,12 +35,12 @@ app.use('/api/redemption', redemptionRoutes);
 app.use('/api/admin', adminRoutes);
 
 // 404处理
-app.use((req: Request, res: Response) => {
+app.use((_req: Request, res: Response) => {
   errorResponse(res, 'NOT_FOUND', '请求的资源不存在', 404);
 });
 
 // 全局错误处理
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   logger.error('Unhandled error:', err);
   errorResponse(res, 'INTERNAL_ERROR', '服务器内部错误', 500, {
     message: config.nodeEnv === 'development' ? err.message : undefined,
