@@ -177,6 +177,42 @@ docker compose exec -T postgres psql -U pingdou pingdou < backup.sql
 5. **定期备份**: 设置数据库自动备份任务
 6. **监控日志**: 使用日志收集工具监控服务状态
 
+## 代码更新
+
+### 方式一：使用更新脚本（推荐）
+
+```bash
+# 赋予执行权限
+chmod +x update.sh
+
+# 执行更新
+./update.sh
+```
+
+脚本会自动：
+- 拉取最新代码（如果使用 git）
+- 重新构建镜像
+- 重启服务
+- 清理旧镜像
+
+### 方式二：手动更新
+
+```bash
+# 1. 拉取最新代码
+git pull
+
+# 2. 重新构建并重启
+docker compose build --no-cache
+docker compose up -d
+
+# 3. 清理旧镜像（可选）
+docker image prune -f
+```
+
+**注意**：
+- `--no-cache` 确保使用最新代码构建
+- 更新不会影响数据库和 Redis 数据（数据在卷中持久化）
+
 ## 故障排查
 
 ```bash
