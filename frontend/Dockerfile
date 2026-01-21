@@ -3,11 +3,11 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# 复制依赖文件
-COPY package*.json ./
+# 复制依赖文件（package-lock.json 已在 .dockerignore 中排除）
+COPY package.json ./
 
-# 安装依赖
-RUN npm ci
+# 安装依赖（使用 npm install 确保可选依赖正确安装）
+RUN npm install
 
 # 复制源代码
 COPY . .
