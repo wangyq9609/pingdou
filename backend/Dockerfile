@@ -3,6 +3,9 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# 安装 Prisma 所需的系统依赖
+RUN apk add --no-cache openssl openssl-dev
+
 # 复制依赖文件
 COPY package*.json ./
 COPY prisma ./prisma/
@@ -24,6 +27,9 @@ RUN npm run build
 FROM node:20-alpine
 
 WORKDIR /app
+
+# 安装 Prisma 所需的系统依赖（运行时库）
+RUN apk add --no-cache openssl
 
 # 复制package.json和prisma schema
 COPY package*.json ./
