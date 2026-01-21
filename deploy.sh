@@ -6,14 +6,22 @@ set -e
 
 echo "🚀 开始部署拼豆应用..."
 
-# 检查 Docker 和 Docker Compose
+# 检查 Docker
 if ! command -v docker &> /dev/null; then
     echo "❌ 错误: 未安装 Docker"
     exit 1
 fi
 
-if ! command -v docker-compose &> /dev/null; then
+# 检测 Docker Compose 命令（兼容新旧版本）
+if docker compose version &> /dev/null; then
+    DOCKER_COMPOSE="docker compose"
+    echo "✅ 使用 Docker Compose (新版本)"
+elif command -v docker-compose &> /dev/null; then
+    DOCKER_COMPOSE="docker-compose"
+    echo "✅ 使用 Docker Compose (旧版本)"
+else
     echo "❌ 错误: 未安装 Docker Compose"
+    echo "   请安装 Docker Compose 或使用 Docker Desktop"
     exit 1
 fi
 
@@ -51,14 +59,14 @@ fi
 
 # 停止旧容器
 echo "🛑 停止旧容器..."
-docker-compose down
+$DOCKER_COMPOSE down
 
 # 构建并启动
 echo "🔨 构建镜像..."
-docker-compose build
+$DOCKER_COMPOSE build
 
 echo "🚀 启动服务..."
-docker-compose up -d
+$DOCKER_COMPOSE up -d
 
 # 等待服务启动
 echo "⏳ 等待服务启动..."
@@ -66,14 +74,14 @@ sleep 10
 
 # 检查服务状态
 echo "📊 检查服务状态..."
-docker-compose ps
+$DOCKER_COMPOSE ps
 
 # 检查健康状态
 echo "🏥 检查健康状态..."
 if curl -f http://localhost:4000/health &> /dev/null; then
     echo "✅ 后端服务正常"
 else
-    echo "⚠️  后端服务可能未就绪，请检查日志: docker-compose logs backend"
+    echo "⚠️  后端服务可能未就绪，请检查日志: $DOCKER_COMPOSE logs backend"
 fi
 
 echo ""
@@ -84,6 +92,6 @@ echo "   前端: http://localhost"
 echo "   后端: http://localhost:4000"
 echo ""
 echo "📋 常用命令:"
-echo "   查看日志: docker-compose logs -f"
-echo "   停止服务: docker-compose down"
-echo "   重启服务: docker-compose restart"
+echo "   查看日志: $DOCKER_COMPOSE logs -f"
+echo "   停止服务: $DOCKER_COMPOSE down"
+echo "   重启服务: $DOCKER_COMPOSE restart"

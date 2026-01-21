@@ -3,8 +3,51 @@
 ## 前置要求
 
 - Docker >= 20.10
-- Docker Compose >= 2.0
+- Docker Compose >= 2.0（或 docker-compose >= 1.29）
 - Linux 系统
+
+### 安装 Docker 和 Docker Compose
+
+#### Ubuntu/Debian
+
+```bash
+# 安装 Docker
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+
+# 启动 Docker 服务
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# 将当前用户添加到 docker 组（可选，避免每次使用 sudo）
+sudo usermod -aG docker $USER
+# 需要重新登录才能生效
+
+# Docker Compose V2（新版本，推荐）
+# Docker 20.10+ 已内置，无需单独安装
+
+# 或者安装 Docker Compose V1（旧版本）
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+# 验证安装
+docker --version
+docker compose version  # 或 docker-compose --version
+```
+
+#### CentOS/RHEL
+
+```bash
+# 安装 Docker
+sudo yum install -y docker
+sudo systemctl start docker
+sudo systemctl enable docker
+
+# Docker Compose V2 已内置在 Docker 20.10+ 中
+# 或安装 V1 版本
+sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+```
 
 ## 快速部署
 
@@ -55,15 +98,20 @@ vim .env
 #### 2. 构建并启动服务
 
 ```bash
-# 构建并启动所有服务
+# 使用 Docker Compose V2（新版本，推荐）
+docker compose up -d
+
+# 或使用 Docker Compose V1（旧版本）
 docker-compose up -d
 
 # 查看服务状态
-docker-compose ps
+docker compose ps  # 或 docker-compose ps
 
 # 查看日志
-docker-compose logs -f
+docker compose logs -f  # 或 docker-compose logs -f
 ```
+
+**注意**: 脚本会自动检测并使用正确的命令格式（`docker compose` 或 `docker-compose`）
 
 ### 3. 验证部署
 
@@ -77,23 +125,25 @@ curl http://localhost
 
 ## 常用命令
 
+**注意**: 以下命令使用 `docker compose`（V2），如果使用 V1 请替换为 `docker-compose`
+
 ```bash
 # 停止所有服务
-docker-compose down
+docker compose down
 
 # 停止并删除数据卷（注意：会删除数据库数据）
-docker-compose down -v
+docker compose down -v
 
 # 重新构建并启动
-docker-compose up -d --build
+docker compose up -d --build
 
 # 查看特定服务日志
-docker-compose logs -f backend
-docker-compose logs -f frontend
+docker compose logs -f backend
+docker compose logs -f frontend
 
 # 进入容器
-docker-compose exec backend sh
-docker-compose exec postgres psql -U pingdou -d pingdou
+docker compose exec backend sh
+docker compose exec postgres psql -U pingdou -d pingdou
 ```
 
 ## 服务说明
@@ -112,10 +162,10 @@ docker-compose exec postgres psql -U pingdou -d pingdou
 备份数据：
 ```bash
 # 备份数据库
-docker-compose exec postgres pg_dump -U pingdou pingdou > backup.sql
+docker compose exec postgres pg_dump -U pingdou pingdou > backup.sql
 
 # 恢复数据库
-docker-compose exec -T postgres psql -U pingdou pingdou < backup.sql
+docker compose exec -T postgres psql -U pingdou pingdou < backup.sql
 ```
 
 ## 生产环境建议
@@ -131,15 +181,15 @@ docker-compose exec -T postgres psql -U pingdou pingdou < backup.sql
 
 ```bash
 # 查看所有容器状态
-docker-compose ps
+docker compose ps
 
 # 查看错误日志
-docker-compose logs --tail=100 backend
+docker compose logs --tail=100 backend
 
 # 重启服务
-docker-compose restart backend
+docker compose restart backend
 
 # 完全重建
-docker-compose down
-docker-compose up -d --build
+docker compose down
+docker compose up -d --build
 ```
