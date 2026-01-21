@@ -1,4 +1,4 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { config } from '../config';
 
 export interface AccessTokenPayload {
@@ -15,14 +15,16 @@ export interface RefreshTokenPayload {
 }
 
 export const generateAccessToken = (payload: AccessTokenPayload): string => {
+  // @ts-expect-error - expiresIn accepts string like '2h', '7d' but types are strict
   return jwt.sign(payload, config.jwt.secret, {
-    expiresIn: config.jwt.accessTokenExpiry as string,
+    expiresIn: config.jwt.accessTokenExpiry,
   });
 };
 
 export const generateRefreshToken = (payload: RefreshTokenPayload): string => {
+  // @ts-expect-error - expiresIn accepts string like '2h', '7d' but types are strict
   return jwt.sign(payload, config.jwt.refreshSecret, {
-    expiresIn: config.jwt.refreshTokenExpiry as string,
+    expiresIn: config.jwt.refreshTokenExpiry,
   });
 };
 
