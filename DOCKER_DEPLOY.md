@@ -201,15 +201,18 @@ chmod +x update.sh
 # 1. 拉取最新代码
 git pull
 
-# 2. 重新构建并重启
-docker compose build --no-cache
-docker compose up -d
+# 2. 重新构建前端和后端（只更新应用服务）
+docker compose build --no-cache backend frontend
 
-# 3. 清理旧镜像（可选）
+# 3. 重启前端和后端服务
+docker compose up -d backend frontend
+
+# 4. 清理旧镜像（可选）
 docker image prune -f
 ```
 
 **注意**：
+- 只更新 `backend` 和 `frontend` 服务，数据库和 Redis 保持不变
 - `--no-cache` 确保使用最新代码构建
 - 更新不会影响数据库和 Redis 数据（数据在卷中持久化）
 

@@ -22,12 +22,12 @@ if [ -d .git ]; then
     git pull
 fi
 
-# 重新构建并启动
-echo "🔨 重新构建镜像..."
-$DOCKER_COMPOSE build --no-cache
+# 重新构建并启动（只更新前端和后端）
+echo "🔨 重新构建前端和后端镜像..."
+$DOCKER_COMPOSE build --no-cache backend frontend
 
-echo "🚀 重启服务..."
-$DOCKER_COMPOSE up -d
+echo "🚀 重启前端和后端服务..."
+$DOCKER_COMPOSE up -d backend frontend
 
 # 清理旧镜像
 echo "🧹 清理旧镜像..."
