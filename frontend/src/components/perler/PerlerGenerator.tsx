@@ -104,14 +104,78 @@ const PerlerGenerator: React.FC = () => {
   const handleExportImage = () => {
     if (!result) return;
 
+    const materials = generateMaterialList(result, options.colorPalette);
+    const total = result.width * result.height;
+
     const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
     // 如果显示色号，需要更大的单元格来容纳文字
     const cellSize = showColorCodes ? 30 : 20;
-    canvas.width = result.width * cellSize;
-    canvas.height = result.height * cellSize;
-    const ctx = canvas.getContext('2d');
+    const patternWidth = result.width * cellSize;
+    const patternHeight = result.height * cellSize;
 
-    if (!ctx) return;
+    // 如果生成色号图，需要计算材料清单的高度
+    let materialListHeight = 0;
+    let materialListWidth = patternWidth;
+    let optimalColumns = 4; // 默认列数
+    
+    if (showColorCodes) {
+      // 计算材料清单尺寸（放大2倍）
+      const padding = 30;
+      const rowHeight = 80; // 2倍
+      const colorBoxSize = 48; // 2倍
+      const spacing = 20; // 2倍
+      
+      // 动态计算最优列数
+      // 创建临时画布来测量文字宽度
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+      if (tempCtx) {
+        tempCtx.font = '24px Arial, sans-serif';
+        // 找到最长的色号和数量文本
+        let maxTextWidth = 0;
+        materials.forEach((item) => {
+          const displayCode = selectedBrand !== 'none' && item.color.brandCodes?.[selectedBrand]
+            ? item.color.brandCodes[selectedBrand]
+            : item.color.hex.slice(1).toUpperCase();
+          const text = `${displayCode} ${item.count}颗`;
+          const textWidth = tempCtx.measureText(text).width;
+          maxTextWidth = Math.max(maxTextWidth, textWidth);
+        });
+        
+        // 每个材料项所需的最小宽度
+        const minItemWidth = colorBoxSize + spacing + maxTextWidth + 20; // 额外20px边距
+        
+        // 计算可用宽度
+        const availableWidth = patternWidth - padding * 2;
+        
+        // 计算最多能放多少列
+        const maxColumns = Math.floor(availableWidth / minItemWidth);
+        
+        // 确保列数在合理范围内（最少2列，最多8列）
+        // 优先选择能充分利用空间的列数
+        optimalColumns = Math.max(2, Math.min(8, Math.max(4, maxColumns)));
+        
+        // 如果材料数量较少，可以适当减少列数
+        if (materials.length <= optimalColumns) {
+          optimalColumns = Math.min(optimalColumns, materials.length);
+        }
+      }
+      
+      const rows = Math.ceil(materials.length / optimalColumns);
+      materialListHeight = padding * 2 + rowHeight * rows + 100; // 额外空间用于总计行（2倍）
+      materialListWidth = patternWidth;
+    }
+
+    // 设置画布尺寸
+    canvas.width = patternWidth;
+    canvas.height = patternHeight + (showColorCodes ? materialListHeight : 0);
+
+    // 设置背景色（浅米色）
+    ctx.fillStyle = '#faf8f3';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
     // 设置文字样式
     if (showColorCodes) {
@@ -122,7 +186,7 @@ const PerlerGenerator: React.FC = () => {
       ctx.font = `bold ${fontSize}px Arial, sans-serif`;
     }
 
-    // 绘制像素
+    // 绘制像素图
     result.pixels.forEach((row, y) => {
       row.forEach((pixel, x) => {
         const xPos = x * cellSize;
@@ -161,6 +225,71 @@ const PerlerGenerator: React.FC = () => {
         }
       });
     });
+
+    // 如果生成色号图，在下方绘制材料清单
+    if (showColorCodes) {
+      const padding = 30;
+      const rowHeight = 80; // 2倍
+      const colorBoxSize = 48; // 2倍
+      const spacing = 20; // 2倍
+      const columns = optimalColumns; // 使用动态计算的列数
+      const rows = Math.ceil(materials.length / columns);
+      const columnWidth = Math.floor((materialListWidth - padding * 2) / columns);
+      const materialListStartY = patternHeight;
+
+      // 绘制分隔线
+      ctx.strokeStyle = '#d0d0d0';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, materialListStartY);
+      ctx.lineTo(canvas.width, materialListStartY);
+      ctx.stroke();
+
+      // 绘制材料清单（字体放大2倍）
+      ctx.font = '24px Arial, sans-serif'; // 2倍
+      materials.forEach((item, index) => {
+        const col = index % columns;
+        const row = Math.floor(index / columns);
+        const x = padding + col * columnWidth;
+        const y = materialListStartY + padding + row * rowHeight;
+
+        // 绘制颜色方块
+        ctx.fillStyle = item.color.hex;
+        ctx.fillRect(x, y, colorBoxSize, colorBoxSize);
+        ctx.strokeStyle = '#d0d0d0';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x, y, colorBoxSize, colorBoxSize);
+
+        // 绘制色号和数量（同一行）
+        const textX = x + colorBoxSize + spacing;
+        const textY = y + colorBoxSize / 2;
+        ctx.fillStyle = '#333333';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        
+        const displayCode = selectedBrand !== 'none' && item.color.brandCodes?.[selectedBrand]
+          ? item.color.brandCodes[selectedBrand]
+          : item.color.hex.slice(1).toUpperCase();
+        
+        // 绘制色号和数量在同一行，用空格分隔
+        ctx.fillText(`${displayCode} ${item.count}颗`, textX, textY);
+      });
+
+      // 绘制总计行
+      const totalY = materialListStartY + padding + rowHeight * rows + 30;
+      ctx.strokeStyle = '#d0d0d0';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(padding, totalY);
+      ctx.lineTo(canvas.width - padding, totalY);
+      ctx.stroke();
+
+      ctx.fillStyle = '#333333';
+      ctx.font = 'bold 24px Arial, sans-serif'; // 2倍
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`总计: ${total}颗`, padding, totalY + 20);
+    }
 
     // 下载
     canvas.toBlob((blob) => {
