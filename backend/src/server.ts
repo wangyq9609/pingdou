@@ -6,6 +6,10 @@ import { errorResponse } from './utils/response';
 
 const app = express();
 
+// 信任代理（用于获取真实客户端IP）
+// 在 Docker 环境中，前端 nginx 作为反向代理，需要信任第一层代理
+app.set('trust proxy', 1);
+
 // 中间件
 app.use(cors({ origin: config.cors.origin, credentials: true }));
 app.use(express.json({ limit: '10mb' }));

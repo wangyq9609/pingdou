@@ -27,7 +27,7 @@ export const config = {
   
   rateLimit: {
     windowMs: 60 * 1000, // 1分钟
-    max: 60, // 最多60次请求
+    max: 200, // 最多200次请求（放宽到每分钟200次）
   },
   
   bcrypt: {

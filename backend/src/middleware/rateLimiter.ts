@@ -18,13 +18,13 @@ export const generalLimiter = rateLimit({
 
 // 认证接口限流（更严格）
 export const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15分钟
-  max: 5, // 最多5次
+  windowMs: 10 * 60 * 1000, // 10分钟
+  max: 15, // 最多15次（放宽限制）
   message: { 
     success: false,
     error: {
       code: 'AUTH_RATE_LIMIT_EXCEEDED',
-      message: '登录尝试过多，请15分钟后再试'
+      message: '登录尝试过多，请10分钟后再试'
     }
   },
   standardHeaders: true,
@@ -33,13 +33,13 @@ export const authLimiter = rateLimit({
 
 // 兑换码限流
 export const redeemLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1小时
-  max: 5, // 最多5次
+  windowMs: 30 * 60 * 1000, // 30分钟
+  max: 20, // 最多20次（放宽限制）
   message: { 
     success: false,
     error: {
       code: 'REDEEM_RATE_LIMIT_EXCEEDED',
-      message: '兑换尝试过多，请1小时后再试'
+      message: '兑换尝试过多，请30分钟后再试'
     }
   },
   standardHeaders: true,
