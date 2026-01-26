@@ -3,6 +3,9 @@ FROM node:20-slim AS builder
 
 WORKDIR /app
 
+# 配置 npm 使用淘宝镜像源以加速依赖下载
+RUN npm config set registry https://registry.npmmirror.com
+
 # 复制依赖文件（package-lock.json 已在 .dockerignore 中排除）
 COPY package.json ./
 

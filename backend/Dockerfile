@@ -6,6 +6,9 @@ WORKDIR /app
 # 配置 Alpine 使用国内镜像源（阿里云）以加速包下载
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
 
+# 配置 npm 使用淘宝镜像源以加速依赖下载
+RUN npm config set registry https://registry.npmmirror.com
+
 # 安装 Prisma 所需的系统依赖
 RUN apk update && apk add --no-cache openssl openssl-dev
 
@@ -33,6 +36,9 @@ WORKDIR /app
 
 # 配置 Alpine 使用国内镜像源（阿里云）以加速包下载
 RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.aliyun.com/g' /etc/apk/repositories
+
+# 配置 npm 使用淘宝镜像源以加速依赖下载
+RUN npm config set registry https://registry.npmmirror.com
 
 # 安装 Prisma 所需的系统依赖（运行时库）
 RUN apk update && apk add --no-cache openssl
