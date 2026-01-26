@@ -25,7 +25,7 @@ const PerlerGenerator: React.FC = () => {
   const [selectedBrand, setSelectedBrand] = useState<BrandType>('MARD');
   const [hoveredPixel, setHoveredPixel] = useState<PixelData | null>(null);
   const [popoverPosition, setPopoverPosition] = useState({ x: 0, y: 0 });
-  const [showColorCodes, setShowColorCodes] = useState(false); // 是否生成色号图
+  const [showColorCodes, setShowColorCodes] = useState(true); // 是否生成色号图
 
   // 处理图片
   const handleProcess = useCallback(async () => {
@@ -494,17 +494,46 @@ const PerlerGenerator: React.FC = () => {
 
               <Divider className="my-2" />
 
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">颜色抖动</span>
-                <Switch
-                  checked={options.dithering}
-                  onChange={(checked) =>
-                    setOptions({ ...options, dithering: checked })
+              <div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm font-medium">最大颜色种类</span>
+                  <span className="text-sm text-gray-600">
+                    {options.maxColorTypes || '不限制'}
+                  </span>
+                </div>
+                <Slider
+                  min={0}
+                  max={50}
+                  value={options.maxColorTypes || 0}
+                  onChange={(value) =>
+                    setOptions({ ...options, maxColorTypes: value })
                   }
+                  marks={{ 0: '不限', 10: '10', 20: '20', 30: '30', 50: '50' }}
                 />
+                <div className="text-xs text-gray-500 mt-1">
+                  限制使用的颜色种类数量，0表示不限制。推荐设置为20-30种
+                </div>
               </div>
-              <div className="text-xs text-gray-500">
-                启用后可以改善渐变效果，但处理时间更长
+
+              <div>
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm font-medium">最小使用数量</span>
+                  <span className="text-sm text-gray-600">
+                    {options.minColorCount || '不过滤'}
+                  </span>
+                </div>
+                <Slider
+                  min={0}
+                  max={50}
+                  value={options.minColorCount || 0}
+                  onChange={(value) =>
+                    setOptions({ ...options, minColorCount: value })
+                  }
+                  marks={{ 0: '不过滤', 10: '10', 20: '20', 30: '30', 50: '50' }}
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  低于此数量的颜色会被合并到相似颜色。推荐设置为10-20颗
+                </div>
               </div>
 
               <Divider className="my-2" />
@@ -519,6 +548,19 @@ const PerlerGenerator: React.FC = () => {
               </div>
               <div className="text-xs text-gray-500">
                 导出时在每个像素上显示色号，方便制作拼豆图纸
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">颜色抖动</span>
+                <Switch
+                  checked={options.dithering}
+                  onChange={(checked) =>
+                    setOptions({ ...options, dithering: checked })
+                  }
+                />
+              </div>
+              <div className="text-xs text-gray-500">
+                启用后可以改善渐变效果，但处理时间更长
               </div>
 
             </Space>

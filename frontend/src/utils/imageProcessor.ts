@@ -26,6 +26,8 @@ export interface ProcessOptions {
   brightness: number; // 亮度调整 (-100 到 100)
   contrast: number; // 对比度调整 (-100 到 100)
   useBicubic?: boolean; // 是否使用双三次插值（默认 true）
+  minColorCount?: number; // 最小颜色使用数量（低于此数量的颜色会被替换为相似颜色）
+  maxColorTypes?: number; // 最大颜色种类数（0表示不限制）
 }
 
 // 默认处理参数
@@ -35,6 +37,8 @@ export const DEFAULT_OPTIONS: ProcessOptions = {
   dithering: false,
   brightness: 0,
   contrast: 0,
+  minColorCount: 0, // 默认不过滤
+  maxColorTypes: 0, // 默认不限制
 };
 
 /**
@@ -260,6 +264,143 @@ function applyDithering(
 }
 
 /**
+ * 颜色优化：合并使用数量过少的颜色
+ * 将低频颜色替换为最相似的高频颜色
+ */
+function optimizeColorUsage(
+  result: ProcessResult,
+  palette: PerlerColor[],
+  minColorCount: number
+): ProcessResult {
+  const totalPixels = result.width * result.height;
+  const minThreshold = minColorCount || Math.max(1, Math.ceil(totalPixels * 0.005)); // 至少0.5%或用户指定值
+
+  // 找出低频和高频颜色
+  const lowFreqColors: string[] = [];
+  const highFreqColors: string[] = [];
+  
+  result.colorUsage.forEach((count, colorId) => {
+    if (count < minThreshold) {
+      lowFreqColors.push(colorId);
+    } else {
+      highFreqColors.push(colorId);
+    }
+  });
+
+  // 如果没有低频颜色或没有高频颜色可替换，直接返回
+  if (lowFreqColors.length === 0 || highFreqColors.length === 0) {
+    return result;
+  }
+
+  // 构建替换映射表
+  const replacementMap = new Map<string, string>();
+  
+  lowFreqColors.forEach(lowFreqColorId => {
+    const lowFreqColor = palette.find(c => c.id === lowFreqColorId);
+    if (!lowFreqColor) return;
+
+    // 找到最相似的高频颜色
+    let minDelta = Infinity;
+    let bestMatch = highFreqColors[0];
+    
+    highFreqColors.forEach(highFreqColorId => {
+      const highFreqColor = palette.find(c => c.id === highFreqColorId);
+      if (!highFreqColor) return;
+
+      const lab1 = rgbToLab(lowFreqColor.rgb);
+      const lab2 = rgbToLab(highFreqColor.rgb);
+      const delta = deltaE2000(lab1, lab2);
+
+      if (delta < minDelta) {
+        minDelta = delta;
+        bestMatch = highFreqColorId;
+      }
+    });
+
+    replacementMap.set(lowFreqColorId, bestMatch);
+  });
+
+  // 应用替换到像素数据
+  const newPixels: PixelData[][] = result.pixels.map(row =>
+    row.map(pixel => {
+      const newColorId = replacementMap.get(pixel.color.id);
+      if (newColorId) {
+        const newColor = palette.find(c => c.id === newColorId);
+        if (newColor) {
+          return { ...pixel, color: newColor };
+        }
+      }
+      return pixel;
+    })
+  );
+
+  // 重新统计颜色使用
+  const newColorUsage = new Map<string, number>();
+  newPixels.forEach(row => {
+    row.forEach(pixel => {
+      const count = newColorUsage.get(pixel.color.id) || 0;
+      newColorUsage.set(pixel.color.id, count + 1);
+    });
+  });
+
+  return {
+    pixels: newPixels,
+    width: result.width,
+    height: result.height,
+    colorUsage: newColorUsage,
+  };
+}
+
+/**
+ * 限制颜色种类数量
+ * 使用简化的颜色聚类策略
+ */
+function limitColorTypes(
+  result: ProcessResult,
+  palette: PerlerColor[],
+  maxColorTypes: number
+): ProcessResult {
+  if (maxColorTypes <= 0 || result.colorUsage.size <= maxColorTypes) {
+    return result;
+  }
+
+  // 按使用频率排序，保留最常用的颜色
+  const sortedColors = Array.from(result.colorUsage.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, maxColorTypes);
+
+  const keepColorIds = new Set(sortedColors.map(([id]) => id));
+  const keepColors = palette.filter(c => keepColorIds.has(c.id));
+
+  // 将不保留的颜色替换为最相似的保留颜色
+  const newPixels: PixelData[][] = result.pixels.map(row =>
+    row.map(pixel => {
+      if (!keepColorIds.has(pixel.color.id)) {
+        const newColor = findClosestPerlerColor(pixel.color.rgb, keepColors);
+        return { ...pixel, color: newColor };
+      }
+      return pixel;
+    })
+  );
+
+  // 重新统计颜色使用
+  const newColorUsage = new Map<string, number>();
+  newPixels.forEach(row => {
+    row.forEach(pixel => {
+      const count = newColorUsage.get(pixel.color.id) || 0;
+      newColorUsage.set(pixel.color.id, count + 1);
+    });
+  });
+
+  return {
+    pixels: newPixels,
+    width: result.width,
+    height: result.height,
+    colorUsage: newColorUsage,
+  };
+}
+
+/**
  * 主处理函数：将图片转换为拼豆像素图
  */
 export async function processImageToPerler(
@@ -321,12 +462,23 @@ export async function processImageToPerler(
     pixels.push(row);
   }
   
-  return {
+  let result: ProcessResult = {
     pixels,
     width,
     height,
     colorUsage,
   };
+
+  // 6. 颜色优化：先限制颜色种类，再合并低频颜色
+  if (options.maxColorTypes && options.maxColorTypes > 0) {
+    result = limitColorTypes(result, options.colorPalette, options.maxColorTypes);
+  }
+
+  if (options.minColorCount && options.minColorCount > 0) {
+    result = optimizeColorUsage(result, options.colorPalette, options.minColorCount);
+  }
+  
+  return result;
 }
 
 /**
